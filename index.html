@@ -602,8 +602,12 @@ input::placeholder{color:#5d7fa3}
   <div class="modal" style="max-width:360px">
     <h2 data-en="Change teacher password" data-th="เปลี่ยนรหัสผ่านครู">Change teacher password</h2>
     <div class="field">
-      <label for="chgEmail" data-en="Owner email (required)" data-th="อีเมลเจ้าของ (จำเป็น)">Owner email (required)</label>
+      <label for="chgEmail" data-en="Owner email" data-th="อีเมลเจ้าของ">Owner email</label>
       <input type="email" id="chgEmail" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="chgCode" data-en="Owner code (only the owner knows it)" data-th="รหัสเจ้าของ (มีแต่เจ้าของที่รู้)">Owner code (only the owner knows it)</label>
+      <input type="password" id="chgCode" autocomplete="off" autocapitalize="off" spellcheck="false">
     </div>
     <div class="field">
       <label for="chgNew" data-en="New password (at least 6 characters)" data-th="รหัสผ่านใหม่ (อย่างน้อย 6 ตัว)">New password (at least 6 characters)</label>
@@ -624,41 +628,65 @@ input::placeholder{color:#5d7fa3}
 </div>
 
 <script>
-/* Change the teacher password. The owner e-mail must be typed in; only a scrambled copy of it is stored here.
-   This is a light check — a single page cannot truly verify who owns an e-mail address. */
+/* Change the teacher password. Needs the owner e-mail AND the owner code.
+   Only scrambled copies of both are stored here (the code with PBKDF2-SHA256).
+   This is a light check — a single page cannot truly prove who someone is. */
 var EMAIL_HASH = '7vjkvrytnp';
+var OWNER_HASH = '1a1dac15aa96d84ebdf2be153899ddb0266ebb8f9aac5384d052ef4150601f78';
 function chgSay(en, th, ok){
   var e = document.getElementById('chgMsg');
   e.textContent = (typeof lang!=='undefined' && lang==='th') ? th : en;
   e.style.color = ok ? '#7be0a8' : '#ff8f86';
   e.style.display = 'block';
 }
-function chgEmailOK(){
+function hexOf(buf){
+  var a = new Uint8Array(buf), s = '';
+  for(var i=0;i<a.length;i++) s += (a[i]<16?'0':'') + a[i].toString(16);
+  return s;
+}
+/* resolves true / false, or null when this browser cannot do the check */
+function chgOwnerOK(){
   var m = String(document.getElementById('chgEmail').value).trim().toLowerCase().replace(/\s/g,'');
-  return pwHash('glabmail:'+m) === EMAIL_HASH;
+  if(pwHash('glabmail:'+m) !== EMAIL_HASH) return Promise.resolve(false);
+  if(!(window.crypto && crypto.subtle && window.TextEncoder)) return Promise.resolve(null);
+  var enc = new TextEncoder();
+  return crypto.subtle.importKey('raw', enc.encode(pwNorm(document.getElementById('chgCode').value)), 'PBKDF2', false, ['deriveBits'])
+    .then(function(k){
+      return crypto.subtle.deriveBits({name:'PBKDF2', salt:enc.encode('glab-owner-v1'), iterations:150000, hash:'SHA-256'}, k, 256);
+    })
+    .then(function(bits){ return hexOf(bits) === OWNER_HASH; })
+    .catch(function(){ return null; });
+}
+function chgDenied(r){
+  if(r === null){ chgSay('This browser cannot check the code here. Open the lab from its https web address.','เบราว์เซอร์นี้ตรวจรหัสที่นี่ไม่ได้ กรุณาเปิดแล็บจากที่อยู่เว็บ https',false); }
+  else { chgSay('The e-mail or the owner code is not correct.','อีเมลหรือรหัสเจ้าของไม่ถูกต้อง',false); }
 }
 function openChg(){
-  ['chgEmail','chgNew','chgNew2'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['chgEmail','chgCode','chgNew','chgNew2'].forEach(function(id){ document.getElementById(id).value=''; });
   document.getElementById('chgMsg').style.display='none';
   document.getElementById('chgMask').classList.add('on');
   setTimeout(function(){ document.getElementById('chgEmail').focus(); }, 50);
 }
 function closeChg(){ document.getElementById('chgMask').classList.remove('on'); }
 function okChg(){
-  if(!chgEmailOK()){ chgSay('This e-mail is not the owner e-mail.','อีเมลนี้ไม่ใช่อีเมลเจ้าของ',false); return; }
   var a = pwNorm(document.getElementById('chgNew').value), b = pwNorm(document.getElementById('chgNew2').value);
-  if(a.length < 6){ chgSay('The new password needs at least 6 characters.','รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัว',false); return; }
-  if(a !== b){ chgSay('The two passwords are not the same.','รหัสผ่านสองช่องไม่ตรงกัน',false); return; }
-  try{ localStorage.setItem('glab_pw_hash', pwHash('glab:'+a)); }
-  catch(e){ chgSay('This browser cannot save the password.','เบราว์เซอร์นี้บันทึกรหัสผ่านไม่ได้',false); return; }
-  chgSay('Password changed on this device.','เปลี่ยนรหัสผ่านในเครื่องนี้แล้ว',true);
-  setTimeout(closeChg, 1200);
+  chgOwnerOK().then(function(r){
+    if(r !== true){ chgDenied(r); return; }
+    if(a.length < 6){ chgSay('The new password needs at least 6 characters.','รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัว',false); return; }
+    if(a !== b){ chgSay('The two passwords are not the same.','รหัสผ่านสองช่องไม่ตรงกัน',false); return; }
+    try{ localStorage.setItem('glab_pw_hash', pwHash('glab:'+a)); }
+    catch(e){ chgSay('This browser cannot save the password.','เบราว์เซอร์นี้บันทึกรหัสผ่านไม่ได้',false); return; }
+    chgSay('Password changed on this device.','เปลี่ยนรหัสผ่านในเครื่องนี้แล้ว',true);
+    setTimeout(closeChg, 1200);
+  });
 }
 function resetPw(){
-  if(!chgEmailOK()){ chgSay('Type the owner e-mail first.','พิมพ์อีเมลเจ้าของก่อน',false); return; }
-  try{ localStorage.removeItem('glab_pw_hash'); }catch(e){}
-  chgSay('Back to the original password.','กลับไปใช้รหัสเดิมแล้ว',true);
-  setTimeout(closeChg, 1200);
+  chgOwnerOK().then(function(r){
+    if(r !== true){ chgDenied(r); return; }
+    try{ localStorage.removeItem('glab_pw_hash'); }catch(e){}
+    chgSay('Back to the original password.','กลับไปใช้รหัสเดิมแล้ว',true);
+    setTimeout(closeChg, 1200);
+  });
 }
 function curPwHash(){
   try{ var s = localStorage.getItem('glab_pw_hash'); if(s) return s; }catch(e){}
