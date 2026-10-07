@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Free Fall Lab — Measure g</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --deep:#06182e;
+  --deep2:#0b2645;
+  --line:rgba(150,200,255,.16);
+  --line2:rgba(150,200,255,.34);
+  --paper:#e9f2ff;
+  --mute:#89aed4;
+  --amber:#ffb703;
+  --cyan:#5ad1e6;
+  --mint:#6ee7b7;
+  --signal:#ff5f57;
+  --ok:#4ade80;
+  --pad:clamp(12px,2.2vw,22px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:'IBM Plex Sans Thai',system-ui,-apple-system,sans-serif;
+  background:var(--deep);color:var(--paper);overflow:hidden;
+  background-image:
+    linear-gradient(var(--line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:34px 34px;
+}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+body{display:flex;flex-direction:column;height:100dvh}
+.app{flex:1;min-height:0;display:flex;flex-direction:column}
+.footbar{flex:none;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:0 8px;padding:5px 12px;border-top:1px solid var(--line);background:rgba(6,18,36,.9);font-size:clamp(9px,1.5vw,11px);line-height:1.5;color:var(--mute);text-align:center}.footbar .seg{white-space:nowrap}.footbar .dot{opacity:.5}
+.topbar{
+  flex:0 0 auto;display:flex;align-items:center;gap:10px;
+  padding:calc(var(--pad)*.55) var(--pad);
+  padding-top:calc(env(safe-area-inset-top) + var(--pad)*.55);
+  border-bottom:1px solid var(--line2);
+  background:rgba(6,24,46,.86);backdrop-filter:blur(6px);
+}
+.brand{min-width:0}
+.brand h1{font-size:clamp(14px,2.3vw,18px);font-weight:700;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand p{font-size:clamp(10px,1.5vw,12px);color:var(--mute);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spacer{flex:1}
+.iconbtn{
+  border:1px solid var(--line2);background:transparent;color:var(--paper);
+  border-radius:8px;padding:7px 11px;font-size:12px;font-weight:600;cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;white-space:nowrap;
+}
+.iconbtn:hover{border-color:var(--amber);color:var(--amber)}
+.iconbtn:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+.tabs{flex:0 0 auto;display:flex;border-bottom:1px solid var(--line2);background:rgba(6,24,46,.6)}
+.tab{
+  flex:1;padding:12px 4px;background:transparent;border:none;cursor:pointer;
+  color:var(--mute);font-family:'IBM Plex Sans Thai',sans-serif;font-size:13px;font-weight:600;
+  border-bottom:2px solid transparent;
+}
+.tab.on{color:var(--amber);border-bottom-color:var(--amber)}
+.tab:focus-visible{outline:2px solid var(--amber);outline-offset:-3px}
+
+.stage{flex:1;display:none;min-height:0}
+.stage.on{display:flex;flex-direction:column}
+
+.track{
+  flex:0 0 80%;min-height:200px;max-height:80%;width:100%;
+  border-bottom:1px solid var(--line2);
+  padding:calc(var(--pad)*.7) var(--pad) 10px var(--pad);
+  display:flex;flex-direction:column;
+}
+.track-head{flex:0 0 auto;font-size:10px;letter-spacing:2px;color:var(--mute);text-transform:uppercase;margin-bottom:8px}
+.zone{flex:1;position:relative;min-height:0;overflow:hidden}
+
+/* --- lab 1 : free fall --- */
+.zoneF{padding-left:52px}
+.ruler{position:absolute;left:0;top:0;bottom:0;width:52px}
+.ruler .rail{position:absolute;left:46px;top:0;bottom:0;width:1px;background:var(--line2)}
+.tick{position:absolute;right:0;transform:translateY(-50%);display:flex;align-items:center;gap:5px;justify-content:flex-end;width:100%}
+.tick .lbl{font-size:10px;color:var(--mute);font-family:'IBM Plex Mono',monospace}
+.tick .bar{width:9px;height:1px;background:var(--line2)}
+.tick.major .bar{width:15px;background:var(--paper);opacity:.7}
+.tick.major .lbl{color:var(--paper);font-weight:500}
+.shaft{position:absolute;left:52px;right:0;top:0;bottom:0}
+.ball{
+  position:absolute;left:50%;margin-left:-11px;top:0;width:22px;height:22px;border-radius:50%;
+  background:radial-gradient(circle at 32% 30%,#ffe9a8,var(--amber) 58%,#c98600);
+  box-shadow:0 0 16px rgba(255,183,3,.45);will-change:transform;
+}
+.ground{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--line2)}
+.ground.hit{background:var(--signal);box-shadow:0 0 22px 3px rgba(255,95,87,.75)}
+.count{
+  position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  font-family:'IBM Plex Mono',monospace;font-size:clamp(52px,13vw,120px);font-weight:600;
+  color:var(--amber);opacity:.9;pointer-events:none;z-index:5;
+}
+.count.on{display:flex}
+
+/* --- lab 2 : pendulum --- */
+.beam{position:absolute;left:8%;right:8%;top:10px;height:3px;background:var(--line2);border-radius:2px}
+.pivot{position:absolute;left:50%;top:8px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:var(--paper);opacity:.85;z-index:3}
+.plumb{position:absolute;left:50%;top:12px;bottom:0;width:0;border-left:1px dashed rgba(150,200,255,.3)}
+.arm{
+  position:absolute;left:50%;top:12px;width:3px;margin-left:-1.5px;transform-origin:50% 0;
+  background:linear-gradient(180deg,#8fe9fa,#2aa3bd);border-radius:2px;
+  box-shadow:0 0 8px rgba(90,209,230,.35);will-change:transform;z-index:2;
+}
+.bob{
+  position:absolute;left:50%;bottom:0;border-radius:50%;transform:translate(-50%,50%);
+  background:radial-gradient(circle at 34% 28%,#46586d,#1b2739 58%,#0a1220);
+  border:2px solid rgba(143,233,250,.6);
+  box-shadow:0 5px 16px rgba(0,0,0,.55), 0 0 12px rgba(90,209,230,.22);
+}
+.lenline{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,183,3,.45);pointer-events:none}
+.lenlabel{position:absolute;left:2px;transform:translateY(-100%);font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--amber);padding-bottom:3px}
+
+/* --- lab 3 : ramp --- */
+.floor{position:absolute;left:0;right:0;height:2px;background:var(--line2)}
+.floor.hit{background:var(--signal);box-shadow:0 0 22px 3px rgba(255,95,87,.7)}
+.ramp{
+  position:absolute;height:5px;border-radius:3px;transform-origin:100% 100%;
+  background:linear-gradient(180deg,#a8f5d6,#2fae82);
+  box-shadow:0 0 10px rgba(110,231,183,.3);
+}
+.block{
+  position:absolute;bottom:5px;border-radius:4px;transform:translateX(-50%);
+  background:linear-gradient(160deg,#4a5b70,#141e2e 65%,#0a1220);
+  border:2px solid rgba(168,245,214,.65);
+  box-shadow:0 4px 12px rgba(0,0,0,.55);
+  will-change:left;
+}
+.hmark{position:absolute;width:0;border-left:1px dashed rgba(255,183,3,.55);pointer-events:none}
+.hlabel{position:absolute;left:5px;top:0;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--amber);white-space:nowrap}
+.llabel{position:absolute;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--mint);white-space:nowrap}
+
+/* --- panel --- */
+.panel{flex:1;min-width:0;overflow-y:auto;padding:var(--pad);padding-bottom:calc(var(--pad) + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+.card{border:1px solid var(--line2);border-radius:10px;padding:14px;margin-bottom:12px;background:rgba(11,38,69,.55)}
+.eyebrow{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--mute);margin-bottom:8px}
+.sublab{font-size:11px;color:var(--mute);margin:12px 0 6px;font-weight:500}
+.sublab:first-of-type{margin-top:0}
+.stations{display:flex;flex-wrap:wrap;gap:7px}
+.chip{
+  position:relative;flex:1 1 auto;min-width:66px;
+  border:1px solid var(--line2);background:transparent;color:var(--mute);
+  border-radius:8px;padding:9px 6px 8px;cursor:pointer;text-align:center;
+  font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;line-height:1.25;
+}
+.chip .cap{display:block;font-size:9px;letter-spacing:1px;opacity:.75;margin-bottom:3px}
+.chip.on{border-color:var(--amber);color:var(--amber);background:rgba(255,183,3,.12)}
+.chip.mchip.on{border-color:var(--cyan);color:var(--cyan);background:rgba(90,209,230,.12)}
+.chip.nchip.on{border-color:var(--mint);color:var(--mint);background:rgba(110,231,183,.12)}
+.chip.done::after{content:'';position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.chip:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.readout{display:flex;gap:18px;align-items:flex-end;margin-top:14px;flex-wrap:wrap}
+.big{font-family:'IBM Plex Mono',monospace;font-size:clamp(24px,4.6vw,38px);font-weight:600;line-height:1;color:var(--amber)}
+.big.cy{color:var(--cyan)}
+.big.mn{color:var(--mint)}
+.big small{font-size:.42em;color:var(--paper);margin-left:5px;font-weight:400}
+.big .cap{display:block;font-size:9px;letter-spacing:1.5px;color:var(--mute);margin-bottom:6px;font-family:'IBM Plex Sans Thai',sans-serif;text-transform:uppercase}
+.hint{font-size:12px;color:var(--mute);line-height:1.6;margin-top:8px}
+.warn{font-size:12px;color:var(--signal);line-height:1.6;margin-top:8px}
+.keyline{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--mute);line-height:1.7;margin-top:10px}
+
+.act{
+  width:100%;border:none;border-radius:10px;padding:16px;cursor:pointer;
+  background:var(--amber);color:#2a1a00;font-weight:700;font-size:16px;
+  font-family:'IBM Plex Sans Thai',sans-serif;
+}
+.act.stop{background:var(--signal);color:#33060a}
+.act:disabled{background:#3a4d66;color:var(--mute);cursor:not-allowed}
+.act:focus-visible{outline:2px solid var(--paper);outline-offset:3px}
+.status{text-align:center;font-size:12px;color:var(--mute);margin-top:8px;min-height:18px;font-family:'IBM Plex Mono',monospace}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:10px;letter-spacing:1.1px;text-transform:uppercase;color:var(--mute);text-align:left;font-weight:500;padding:0 5px 8px 0;border-bottom:1px solid var(--line2)}
+td{padding:6px 5px 6px 0;border-bottom:1px solid var(--line);vertical-align:middle}
+td.n{font-family:'IBM Plex Mono',monospace;color:var(--mute);width:26px}
+td.par{font-family:'IBM Plex Mono',monospace;color:var(--paper);white-space:nowrap;font-size:12px}
+input[type=text],input[type=number]{
+  width:100%;background:rgba(6,24,46,.7);border:1px solid var(--line2);color:var(--paper);
+  border-radius:7px;padding:9px 10px;font-size:14px;font-family:'IBM Plex Mono',monospace;
+}
+input:focus{outline:none;border-color:var(--amber)}
+input::placeholder{color:#5d7fa3}
+.del{background:none;border:none;color:#7089a8;font-size:16px;cursor:pointer;padding:2px 5px;line-height:1}
+.del:hover{color:var(--signal)}
+.empty{font-size:12px;color:var(--mute);padding:14px 0;text-align:center;line-height:1.6}
+.row2{display:flex;gap:8px;margin-top:10px}
+.row2 .iconbtn{flex:1;text-align:center;padding:10px}
+.formula{font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--amber);margin:6px 0 2px}
+.formula.cy{color:var(--cyan)}
+.formula.mn{color:var(--mint);font-size:13px;line-height:1.7}
+
+.mask{position:fixed;inset:0;background:rgba(3,12,24,.82);display:none;align-items:center;justify-content:center;padding:14px;z-index:40}
+.mask.on{display:flex}
+.modal{width:100%;max-width:460px;max-height:88dvh;overflow-y:auto;background:var(--deep2);border:1px solid var(--line2);border-radius:12px;padding:18px}
+.modal h2{font-size:16px;margin-bottom:14px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--mute);margin-bottom:6px}
+.hgrid{display:flex;flex-wrap:wrap;gap:7px}
+.hgrid .hcell{flex:1 1 76px}
+.hgrid .hcell span{display:block;font-size:9px;letter-spacing:1px;color:var(--mute);margin-bottom:4px;font-family:'IBM Plex Mono',monospace}
+.seg{display:flex;gap:6px}
+.seg button{
+  flex:1;padding:9px;border-radius:7px;border:1px solid var(--line2);background:transparent;
+  color:var(--mute);font-size:12px;cursor:pointer;font-family:'IBM Plex Sans Thai',sans-serif;
+}
+.seg button.on{border-color:var(--amber);color:var(--amber);background:rgba(255,183,3,.1)}
+.linkbox{font-family:'IBM Plex Mono',monospace;font-size:11px;word-break:break-all;background:rgba(6,24,46,.8);border:1px solid var(--line);border-radius:7px;padding:9px;color:var(--mute);margin-top:8px;max-height:78px;overflow-y:auto}
+.note{font-size:11px;color:var(--mute);line-height:1.6;margin-top:6px}
+.note.bad{color:var(--signal)}
+.sect{border-top:1px solid var(--line);padding-top:14px;margin-top:4px}
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);
+  background:var(--ok);color:#04220f;font-size:13px;font-weight:600;padding:10px 18px;border-radius:99px;
+  opacity:0;pointer-events:none;transition:.22s;z-index:60;
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:560px){
+  .track{flex:0 0 80%;min-height:170px}
+  .zoneF{padding-left:40px}
+  .ruler{width:40px}
+  .ruler .rail{left:36px}
+  .shaft{left:40px}
+  .ball{width:18px;height:18px;margin-left:-9px}
+  .brand p{display:none}
+  .chip{min-width:52px;font-size:12px;padding:8px 3px}
+  .tab{font-size:11px;padding:11px 2px}
+  .readout{gap:12px}
+}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <h1 data-en="Free Fall Lab" data-th="ปฏิบัติการตกอิสระ">Free Fall Lab</h1>
+      <p data-en="Drop the ball, time the fall, find g" data-th="ปล่อยลูกบอล จับเวลาการตก แล้วหาค่า g">Drop the ball, time the fall, find g</p>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="langBtn" onclick="toggleLang()">ไทย</button>
+    <button class="iconbtn" id="gearBtn" onclick="openSettings()" data-en="Teacher" data-th="ครู">Teacher</button>
+  </div>
+
+  <div class="tabs" style="display:none">
+    <button class="tab on" id="tabF" onclick="showLab('fall')" data-en="1 · Free fall" data-th="1 · ตกอิสระ">1 · Free fall</button>
+    <button class="tab" id="tabP" onclick="showLab('pend')" data-en="2 · Pendulum" data-th="2 · เพนดูลัม">2 · Pendulum</button>
+    <button class="tab" id="tabR" onclick="showLab('ramp')" data-en="3 · Ramp" data-th="3 · รางเอียง">3 · Ramp</button>
+  </div>
+
+  <!-- ============ LAB 1 : FREE FALL ============ -->
+  <div class="stage on" id="stageF">
+    <div class="track">
+      <div class="track-head" data-en="Drop track" data-th="รางปล่อยวัตถุ">Drop track</div>
+      <div class="zone zoneF" id="zoneF">
+        <div class="ruler" id="ruler"><div class="rail"></div></div>
+        <div class="shaft" id="shaft">
+          <div class="ball" id="ball"></div>
+          <div class="ground" id="ground"></div>
+        </div>
+        <div class="count" id="count"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="card">
+        <div class="eyebrow" data-en="Choose a height — 5 to measure" data-th="เลือกความสูง — ต้องวัดครบ 5 ค่า">Choose a height</div>
+        <div class="stations" id="stationsF"></div>
+        <div class="readout">
+          <div class="big mono"><span class="cap" data-en="Drop height" data-th="ความสูง">Drop height</span><span id="hVal">5.0</span><small>m</small></div>
+          <div class="big mono"><span class="cap" data-en="World" data-th="ดาว">World</span><span id="worldVal">Earth</span><small id="gSmall">g = 9.81</small></div>
+        </div>
+        <div class="keyline" id="keyF" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <button class="act" id="dropBtn" onclick="startDrop()" data-en="Drop the ball" data-th="ปล่อยลูกบอล">Drop the ball</button>
+        <div class="status mono" id="statusF"></div>
+        <div class="hint" data-en="Start your stopwatch the moment the ball is released, stop it the moment it hits the ground." data-th="กดเริ่มจับเวลาตอนลูกบอลหลุดมือ และกดหยุดตอนลูกบอลแตะพื้น">Start your stopwatch at release.</div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow" data-en="Your measurements" data-th="ผลการจับเวลาของคุณ">Your measurements</div>
+        <input type="text" id="nameF" placeholder="Name / Class" data-en-ph="Name / Class" data-th-ph="ชื่อ / ห้อง" oninput="saveName('F')">
+        <div style="height:10px"></div>
+        <table>
+          <thead><tr>
+            <th style="width:26px">#</th>
+            <th data-en="Height" data-th="ความสูง">Height</th>
+            <th data-en="Fall time (s)" data-th="เวลาที่ตก (วิ)">Fall time (s)</th>
+            <th style="width:26px"></th>
+          </tr></thead>
+          <tbody id="tbodyF"></tbody>
+        </table>
+        <div class="empty" id="emptyF" data-en="No trials yet. Pick a height above and drop the ball." data-th="ยังไม่มีข้อมูล เลือกความสูงด้านบนแล้วกดปล่อยลูกบอล">No trials yet.</div>
+        <div class="row2">
+          <button class="iconbtn" onclick="copyTable('F')" data-en="Copy" data-th="คัดลอก">Copy</button>
+          <button class="iconbtn" onclick="downloadCSV('F')" data-en="CSV" data-th="CSV">CSV</button>
+          <button class="iconbtn" onclick="clearTrials('F')" data-en="Clear" data-th="ล้าง">Clear</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow" data-en="Your task" data-th="โจทย์ของคุณ">Your task</div>
+        <div class="formula">h = ½ · g · t²</div>
+        <div class="hint" data-en="Measure the fall time at all five heights. Then plot h on the vertical axis against t² on the horizontal axis. The points should lie on a straight line through the origin, and its slope is g/2." data-th="จับเวลาให้ครบทั้ง 5 ความสูง แล้วเขียนกราฟ แกนตั้งเป็น h แกนนอนเป็น t² จุดควรเรียงเป็นเส้นตรงผ่านจุดกำเนิด และความชันของเส้นคือ g/2">Plot h against t².</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ LAB 2 : PENDULUM ============ -->
+  <div class="stage" id="stageP">
+    <div class="track">
+      <div class="track-head" data-en="Pendulum" data-th="ลูกตุ้มนาฬิกา">Pendulum</div>
+      <div class="zone" id="zoneP">
+        <div class="beam"></div>
+        <div class="plumb"></div>
+        <div class="pivot"></div>
+        <div class="arm" id="arm"><div class="bob" id="bob"></div></div>
+        <div class="lenline" id="lenline"><span class="lenlabel" id="lenlabel"></span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="card">
+        <div class="eyebrow" data-en="Set up the pendulum" data-th="ตั้งค่าลูกตุ้ม">Set up the pendulum</div>
+        <div class="sublab" data-en="String length — 5 to measure" data-th="ความยาวเชือก — ต้องวัดครบ 5 ค่า">String length</div>
+        <div class="stations" id="stationsP"></div>
+        <div class="sublab" data-en="Bob mass — 2 to compare" data-th="มวลลูกตุ้ม — เปรียบเทียบ 2 ค่า">Bob mass</div>
+        <div class="stations" id="stationsM"></div>
+        <div class="readout">
+          <div class="big cy mono"><span class="cap" data-en="Length" data-th="ความยาว">Length</span><span id="lVal">0.40</span><small>m</small></div>
+          <div class="big cy mono"><span class="cap" data-en="Mass" data-th="มวล">Mass</span><span id="mVal">50</span><small>g</small></div>
+        </div>
+        <div class="keyline" id="keyP" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <button class="act" id="swingBtn" onclick="toggleSwing()" data-en="Start swinging" data-th="เริ่มแกว่ง">Start swinging</button>
+        <div class="status mono" id="statusP"></div>
+        <div class="hint" data-en="The pendulum keeps swinging until you press stop. Count 10 complete swings using the dashed centre line, time them, then press stop and type the total." data-th="ลูกตุ้มจะแกว่งไปเรื่อยๆ จนกว่าจะกดหยุด ให้นับครบ 10 รอบโดยดูจากเส้นประตรงกลาง จับเวลาไว้ แล้วกดหยุดและกรอกเวลารวม">Count 10 complete swings.</div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow" data-en="Your measurements" data-th="ผลการจับเวลาของคุณ">Your measurements</div>
+        <input type="text" id="nameP" placeholder="Name / Class" data-en-ph="Name / Class" data-th-ph="ชื่อ / ห้อง" oninput="saveName('P')">
+        <div style="height:10px"></div>
+        <table>
+          <thead><tr>
+            <th style="width:26px">#</th>
+            <th data-en="Length / mass" data-th="ความยาว / มวล">Length / mass</th>
+            <th data-en="Time for 10 swings (s)" data-th="เวลา 10 รอบ (วิ)">Time for 10 swings (s)</th>
+            <th style="width:26px"></th>
+          </tr></thead>
+          <tbody id="tbodyP"></tbody>
+        </table>
+        <div class="empty" id="emptyP" data-en="No trials yet. Pick a length and a mass above, then start the pendulum." data-th="ยังไม่มีข้อมูล เลือกความยาวและมวลด้านบน แล้วกดเริ่มแกว่ง">No trials yet.</div>
+        <div class="row2">
+          <button class="iconbtn" onclick="copyTable('P')" data-en="Copy" data-th="คัดลอก">Copy</button>
+          <button class="iconbtn" onclick="downloadCSV('P')" data-en="CSV" data-th="CSV">CSV</button>
+          <button class="iconbtn" onclick="clearTrials('P')" data-en="Clear" data-th="ล้าง">Clear</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow" data-en="Your task" data-th="โจทย์ของคุณ">Your task</div>
+        <div class="formula cy">T = 2π · √(L / g)</div>
+        <div class="hint" data-en="Divide each total by 10 to get one period T. Plot L on the vertical axis against T² on the horizontal axis — the slope gives you g. Then repeat a length with the second mass and compare the two times before you write your conclusion." data-th="เอาเวลารวมแต่ละครั้งหารด้วย 10 จะได้คาบ T เขียนกราฟ แกนตั้งเป็น L แกนนอนเป็น T² ความชันจะนำไปหาค่า g ได้ จากนั้นให้ทำซ้ำที่ความยาวเดิมแต่เปลี่ยนเป็นมวลอีกค่า แล้วเทียบเวลาสองครั้งก่อนเขียนสรุป">Plot L against T², then compare the two masses.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ LAB 3 : RAMP ============ -->
+  <div class="stage" id="stageR">
+    <div class="track">
+      <div class="track-head" data-en="Inclined track" data-th="รางเอียง">Inclined track</div>
+      <div class="zone" id="zoneR">
+        <div class="floor" id="floor"></div>
+        <div class="hmark" id="hmark"><span class="hlabel" id="hlabel"></span></div>
+        <div class="ramp" id="ramp"><div class="block" id="block"></div></div>
+        <span class="llabel" id="llabel"></span>
+        <div class="count" id="countR"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="card">
+        <div class="eyebrow" data-en="Set up the track" data-th="ตั้งค่าราง">Set up the track</div>
+        <div class="sublab" data-en="Raised height — 5 to measure" data-th="ความสูงที่ยก — ต้องวัดครบ 5 ค่า">Raised height</div>
+        <div class="stations" id="stationsR"></div>
+        <div class="sublab" data-en="Block mass — 2 to compare" data-th="มวลของวัตถุ — เปรียบเทียบ 2 ค่า">Block mass</div>
+        <div class="stations" id="stationsN"></div>
+        <div class="readout">
+          <div class="big mn mono"><span class="cap" data-en="Raised height" data-th="ยกสูง">Raised height</span><span id="rhVal">0.40</span><small>m</small></div>
+          <div class="big mn mono"><span class="cap" data-en="Mass" data-th="มวล">Mass</span><span id="rmVal">200</span><small>g</small></div>
+          <div class="big mn mono"><span class="cap" data-en="Track length" data-th="ความยาวราง">Track length</span><span id="rlVal">2.00</span><small>m</small></div>
+        </div>
+        <div class="warn" id="warnR" style="display:none"></div>
+        <div class="keyline" id="keyR" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <button class="act" id="slideBtn" onclick="startSlide()" data-en="Release the block" data-th="ปล่อยวัตถุ">Release the block</button>
+        <div class="status mono" id="statusR"></div>
+        <div class="hint" data-en="Start your stopwatch the moment the block is released, stop it the moment it reaches the bottom of the track." data-th="กดเริ่มจับเวลาตอนวัตถุเริ่มเคลื่อน และกดหยุดตอนวัตถุถึงปลายล่างของราง">Time the whole run.</div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow" data-en="Your measurements" data-th="ผลการจับเวลาของคุณ">Your measurements</div>
+        <input type="text" id="nameR" placeholder="Name / Class" data-en-ph="Name / Class" data-th-ph="ชื่อ / ห้อง" oninput="saveName('R')">
+        <div style="height:10px"></div>
+        <table>
+          <thead><tr>
+            <th style="width:26px">#</th>
+            <th data-en="Height / mass" data-th="ความสูง / มวล">Height / mass</th>
+            <th data-en="Time down the track (s)" data-th="เวลาที่ไถลลง (วิ)">Time down the track (s)</th>
+            <th style="width:26px"></th>
+          </tr></thead>
+          <tbody id="tbodyR"></tbody>
+        </table>
+        <div class="empty" id="emptyR" data-en="No trials yet. Pick a height and a mass above, then release the block." data-th="ยังไม่มีข้อมูล เลือกความสูงและมวลด้านบน แล้วกดปล่อยวัตถุ">No trials yet.</div>
+        <div class="row2">
+          <button class="iconbtn" onclick="copyTable('R')" data-en="Copy" data-th="คัดลอก">Copy</button>
+          <button class="iconbtn" onclick="downloadCSV('R')" data-en="CSV" data-th="CSV">CSV</button>
+          <button class="iconbtn" onclick="clearTrials('R')" data-en="Clear" data-th="ล้าง">Clear</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow" data-en="Your task" data-th="โจทย์ของคุณ">Your task</div>
+        <div class="formula mn">v = 2L / t<br>Ep = m · g · h<br>Ek = ½ · m · v²</div>
+        <div class="hint" data-en="The block starts from rest and speeds up evenly, so its speed at the bottom is twice its average speed. Work out v, then compare Ep at the top with Ek at the bottom. They will not match — decide where the missing energy went, and check whether the heavier block loses a larger share." data-th="วัตถุเริ่มจากหยุดนิ่งและเร่งขึ้นอย่างสม่ำเสมอ ความเร็วที่ปลายรางจึงเป็นสองเท่าของความเร็วเฉลี่ย ให้หาค่า v แล้วเทียบพลังงานศักย์ที่จุดปล่อยกับพลังงานจลน์ที่ปลายราง ค่าจะไม่เท่ากัน ให้ตอบว่าพลังงานที่หายไปไปไหน และตรวจดูว่าวัตถุที่หนักกว่าสูญเสียสัดส่วนมากกว่าหรือไม่">Compare Ep with Ek.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TEACHER SETTINGS ============ -->
+<div class="mask" id="mask" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <h2 data-en="Teacher settings" data-th="ตั้งค่าสำหรับครู">Teacher settings</h2>
+
+    <div class="field" id="secFall">
+      <label data-en="Lab 1 — gravity g (m/s², 0.5–30)" data-th="แลป 1 — ค่าแรงโน้มถ่วง g (m/s², 0.5–30)">Lab 1 — gravity g</label>
+      <input type="number" id="setG" min="0.5" max="30" step="0.01">
+      <div class="hgrid" style="margin-top:8px" id="gPresets"></div>
+      <div class="note" data-en="Switch to another world and the ball falls at that world's real g — Earth is 9.8, the Moon is 1.6, Mars is 3.7." data-th="เปลี่ยนไปดาวดวงอื่น ลูกบอลจะตกด้วยค่า g จริงของดาวนั้น โลก 9.8 ดวงจันทร์ 1.6 อังคาร 3.7">Try the Moon or Mars.</div>
+
+      <label style="margin-top:14px" data-en="Five drop heights (metres, 1–200)" data-th="ความสูง 5 ค่า (เมตร, 1–200)">Five drop heights</label>
+      <div class="hgrid">
+        <div class="hcell"><span>1</span><input type="number" id="setH0" min="1" max="200" step="0.5"></div>
+        <div class="hcell"><span>2</span><input type="number" id="setH1" min="1" max="200" step="0.5"></div>
+        <div class="hcell"><span>3</span><input type="number" id="setH2" min="1" max="200" step="0.5"></div>
+        <div class="hcell"><span>4</span><input type="number" id="setH3" min="1" max="200" step="0.5"></div>
+        <div class="hcell"><span>5</span><input type="number" id="setH4" min="1" max="200" step="0.5"></div>
+      </div>
+      <div class="note" data-en="Spread the values out — a wide spread makes the straight-line graph much clearer." data-th="ควรเลือกค่าที่ห่างกันพอสมควร ยิ่งช่วงกว้าง กราฟเส้นตรงยิ่งชัด">Spread the values out.</div>
+    </div>
+
+    <div id="secPend">
+      <div class="field">
+        <label data-en="Lab 2 — five string lengths (metres, 0.1–10)" data-th="แลป 2 — ความยาวเชือก 5 ค่า (เมตร, 0.1–10)">Lab 2 — five string lengths</label>
+        <div class="hgrid">
+          <div class="hcell"><span>1</span><input type="number" id="setL0" min="0.1" max="10" step="0.05"></div>
+          <div class="hcell"><span>2</span><input type="number" id="setL1" min="0.1" max="10" step="0.05"></div>
+          <div class="hcell"><span>3</span><input type="number" id="setL2" min="0.1" max="10" step="0.05"></div>
+          <div class="hcell"><span>4</span><input type="number" id="setL3" min="0.1" max="10" step="0.05"></div>
+          <div class="hcell"><span>5</span><input type="number" id="setL4" min="0.1" max="10" step="0.05"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label data-en="Two bob masses (grams, 5–5000)" data-th="มวลลูกตุ้ม 2 ค่า (กรัม, 5–5000)">Two bob masses (grams)</label>
+        <div class="hgrid">
+          <div class="hcell"><span>1</span><input type="number" id="setM0" min="5" max="5000" step="5"></div>
+          <div class="hcell"><span>2</span><input type="number" id="setM1" min="5" max="5000" step="5"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label data-en="Swing angle (degrees, 3–20)" data-th="มุมแกว่ง (องศา, 3–20)">Swing angle (degrees, 3–20)</label>
+        <input type="number" id="setAmp" min="3" max="20" step="1">
+        <div class="note" data-en="The simple pendulum formula only holds for small angles. Above about 15° the real period drifts away from the formula." data-th="สูตรเพนดูลัมอย่างง่ายใช้ได้กับมุมเล็กเท่านั้น ถ้าเกินราว 15 องศา คาบจริงจะเริ่มเบี่ยงจากสูตร">Small angles only.</div>
+      </div>
+    </div>
+
+    <div id="secRamp">
+      <div class="field">
+        <label data-en="Lab 3 — track length (metres, 0.5–10)" data-th="แลป 3 — ความยาวราง (เมตร, 0.5–10)">Lab 3 — track length</label>
+        <input type="number" id="setTL" min="0.5" max="10" step="0.1">
+      </div>
+      <div class="field">
+        <label data-en="Five raised heights (metres)" data-th="ความสูงที่ยก 5 ค่า (เมตร)">Five raised heights (metres)</label>
+        <div class="hgrid">
+          <div class="hcell"><span>1</span><input type="number" id="setR0" min="0.05" max="9" step="0.05"></div>
+          <div class="hcell"><span>2</span><input type="number" id="setR1" min="0.05" max="9" step="0.05"></div>
+          <div class="hcell"><span>3</span><input type="number" id="setR2" min="0.05" max="9" step="0.05"></div>
+          <div class="hcell"><span>4</span><input type="number" id="setR3" min="0.05" max="9" step="0.05"></div>
+          <div class="hcell"><span>5</span><input type="number" id="setR4" min="0.05" max="9" step="0.05"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label data-en="Two block masses (grams, 5–5000)" data-th="มวลของวัตถุ 2 ค่า (กรัม, 5–5000)">Two block masses (grams)</label>
+        <div class="hgrid">
+          <div class="hcell"><span>1</span><input type="number" id="setN0" min="5" max="5000" step="5"></div>
+          <div class="hcell"><span>2</span><input type="number" id="setN1" min="5" max="5000" step="5"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label data-en="Friction coefficient (0 – 0.9)" data-th="สัมประสิทธิ์ความเสียดทาน (0 – 0.9)">Friction coefficient (0 – 0.9)</label>
+        <input type="number" id="setMu" min="0" max="0.9" step="0.01">
+        <div class="note" id="muNote" data-en="Friction eats part of the energy, so Ek at the bottom is always smaller than Ep at the top. Set 0 for a perfect frictionless track." data-th="ความเสียดทานกินพลังงานไปส่วนหนึ่ง พลังงานจลน์ที่ปลายรางจึงน้อยกว่าพลังงานศักย์เสมอ ถ้าตั้ง 0 จะเป็นรางลื่นสมบูรณ์">Friction eats part of the energy.</div>
+        <div class="note bad" id="muWarn" style="display:none"></div>
+      </div>
+    </div>
+
+    <div class="field sect">
+      <label data-en="Release timing" data-th="จังหวะการปล่อย">Release timing</label>
+      <div class="seg">
+        <button id="mode-count" onclick="setMode('count')" data-en="Countdown 3-2-1" data-th="นับถอยหลัง 3-2-1">Countdown 3-2-1</button>
+        <button id="mode-random" onclick="setMode('random')" data-en="Random delay" data-th="หน่วงเวลาสุ่ม">Random delay</button>
+      </div>
+      <div class="note" data-en="Random delay stops students from anticipating the release, so their reaction time shows up honestly in the data." data-th="แบบสุ่มทำให้นักเรียนเดาจังหวะปล่อยไม่ได้ ค่าคลาดเคลื่อนจากเวลาปฏิกิริยาจึงปรากฏตามจริง">Random delay.</div>
+    </div>
+
+    <div class="field">
+      <label data-en="Sound" data-th="เสียง">Sound</label>
+      <div class="seg">
+        <button id="snd-on" onclick="setSound(true)" data-en="On" data-th="เปิด">On</button>
+        <button id="snd-off" onclick="setSound(false)" data-en="Off" data-th="ปิด">Off</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label data-en="Answer key (teacher view only)" data-th="เฉลย (แสดงเฉพาะหน้าครู)">Answer key</label>
+      <div class="seg">
+        <button id="key-on" onclick="setKey(true)" data-en="Show" data-th="แสดง">Show</button>
+        <button id="key-off" onclick="setKey(false)" data-en="Hide" data-th="ซ่อน">Hide</button>
+      </div>
+      <div class="note" data-en="The student link never shows the answer, whatever you pick here." data-th="ลิงก์ของนักเรียนจะไม่แสดงเฉลย ไม่ว่าจะตั้งค่านี้ไว้อย่างไร">Students never see the key.</div>
+    </div>
+
+    <button class="act" style="padding:13px;font-size:14px" onclick="makeLink()" data-en="Create student link" data-th="สร้างลิงก์สำหรับนักเรียน">Create student link</button>
+    <div class="linkbox" id="linkBox" style="display:none"></div>
+    <button class="iconbtn" id="copyLinkBtn" style="width:100%;margin-top:8px;display:none" onclick="copyLink()" data-en="Copy link" data-th="คัดลอกลิงก์">Copy link</button>
+    <div class="note" id="linkNote" style="display:none" data-en="Copied. All values are locked and the settings button is hidden." data-th="คัดลอกแล้ว ทุกค่าจะถูกล็อกและปุ่มตั้งค่าจะถูกซ่อน">Copied.</div>
+
+    <div class="row2">
+      <button class="iconbtn" onclick="closeSettings()" data-en="Close" data-th="ปิด">Close</button>
+      <button class="iconbtn" onclick="applySettings()" data-en="Apply" data-th="ใช้ค่านี้">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="footbar" id="credit"><span class="seg" data-en="Asst.Prof.Dr. Rossumont Jaryabhand" data-th="ผศ.ดร.รสสุมนต์ จารยะพันธุ์">Asst.Prof.Dr. Rossumont Jaryabhand</span><span class="dot">·</span><span class="seg" data-en="Rajamangala University of Technology Tawan-ok, Uthenthawai Campus" data-th="มหาวิทยาลัยเทคโนโลยีราชมงคลตะวันออก อุเทนถวาย">Rajamangala University of Technology Tawan-ok, Uthenthawai Campus</span><span class="dot">·</span><span class="seg" data-en="No Right Reserved" data-th="ไม่สงวนลิขสิทธิ์">No Right Reserved</span></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   1) Settings
+   A student link looks like this:
+   ?h=5,10,15,20,25&L=0.4,0.6,0.8,1,1.2&m=50,200&a=10
+    &r=0.4,0.6,0.8,1,1.2&rm=200,500&rl=2&ru=0.1&lock=1
+============================================================ */
+var EARTH_G = 9.80665;      /* fixed — used by the pendulum and the ramp */
+var G = 9.80665;            /* the free-fall gravity, teacher-adjustable */
+var PLANETS = [
+  { id:'mercury', en:'Mercury', th:'ดาวพุธ',    g:3.70 },
+  { id:'venus',   en:'Venus',   th:'ดาวศุกร์',   g:8.87 },
+  { id:'earth',   en:'Earth',   th:'โลก',        g:9.80665 },
+  { id:'moon',    en:'Moon',    th:'ดวงจันทร์',  g:1.62 },
+  { id:'mars',    en:'Mars',    th:'ดาวอังคาร',  g:3.72 },
+  { id:'jupiter', en:'Jupiter', th:'ดาวพฤหัสบดี',g:24.79 },
+  { id:'saturn',  en:'Saturn',  th:'ดาวเสาร์',   g:10.44 }
+];
+var DEF_H  = [5,10,15,20,25];
+var DEF_L  = [0.4,0.6,0.8,1.0,1.2];
+var DEF_M  = [50,200];
+var DEF_R  = [0.4,0.6,0.8,1.0,1.2];
+var DEF_N  = [200,500];
+
+var cfg = {
+  g: EARTH_G,
+  heights: DEF_H.slice(),
+  lengths: DEF_L.slice(),
+  masses:  DEF_M.slice(),
+  amp: 10,
+  rheights: DEF_R.slice(),
+  rmasses:  DEF_N.slice(),
+  tlen: 2.0,
+  mu: 0.10,
+  mode: 'count',
+  sound: true,
+  key: false
+};
+var curF = 0, curL = 0, curM = 0, curR = 0, curN = 0;
+var lab = 'fall';
+var locked = false;
+var lang = 'en';
+var trials = { F: [], P: [], R: [] };
+var falling = false, swinging = false, sliding = false, swingRAF = null;
+
+function clamp(v,a,b){ return Math.min(b,Math.max(a,v)); }
+function theH(){ return cfg.heights[curF]; }
+function theL(){ return cfg.lengths[curL]; }
+function theM(){ return cfg.masses[curM]; }
+function theRH(){ return cfg.rheights[curR]; }
+function theRM(){ return cfg.rmasses[curN]; }
+function periodOf(L){ return 2*Math.PI*Math.sqrt(L/EARTH_G); }
+
+/* Acceleration along the incline:  a = g(sinθ − μcosθ)
+   If friction wins, the block never moves and a comes back 0. */
+function slideAccel(h){
+  var L = cfg.tlen;
+  var s = clamp(h/L, 0, 0.999);
+  var c = Math.sqrt(1 - s*s);
+  var a = EARTH_G*(s - cfg.mu*c);
+  return (a > 0.0001) ? a : 0;
+}
+function slideTime(h){
+  var a = slideAccel(h);
+  return (a > 0) ? Math.sqrt(2*cfg.tlen/a) : 0;
+}
+
+function parseList(str, count, lo, hi, fallback){
+  var parts = String(str).split(','), out = [];
+  for(var i=0;i<parts.length && out.length<count;i++){
+    var v = parseFloat(parts[i]);
+    if(isFinite(v)) out.push(clamp(v,lo,hi));
+  }
+  while(out.length < count) out.push(fallback[out.length]);
+  return out;
+}
+
+function loadConfig(){
+  try{
+    var s = JSON.parse(localStorage.getItem('glab_ff_cfg')||'null');
+    if(s && typeof s === 'object'){
+      if(isFinite(s.g)) cfg.g = clamp(parseFloat(s.g),0.5,30);
+      if(Array.isArray(s.heights))  cfg.heights  = parseList(s.heights.join(','),5,1,200,DEF_H);
+      if(Array.isArray(s.lengths))  cfg.lengths  = parseList(s.lengths.join(','),5,0.1,10,DEF_L);
+      if(Array.isArray(s.masses))   cfg.masses   = parseList(s.masses.join(','),2,5,5000,DEF_M);
+      if(Array.isArray(s.rheights)) cfg.rheights = parseList(s.rheights.join(','),5,0.05,9,DEF_R);
+      if(Array.isArray(s.rmasses))  cfg.rmasses  = parseList(s.rmasses.join(','),2,5,5000,DEF_N);
+      if(isFinite(s.amp))  cfg.amp  = clamp(parseFloat(s.amp),3,20);
+      if(isFinite(s.tlen)) cfg.tlen = clamp(parseFloat(s.tlen),0.5,10);
+      if(isFinite(s.mu))   cfg.mu   = clamp(parseFloat(s.mu),0,0.9);
+      if(s.mode==='random'||s.mode==='count') cfg.mode = s.mode;
+      cfg.sound = s.sound !== false;
+      cfg.key = s.key === true;
+    }
+  }catch(e){}
+
+  var q = new URLSearchParams(location.search);
+  if(q.has('g')){ var gv = parseFloat(q.get('g')); if(isFinite(gv)) cfg.g = clamp(gv,0.5,30); }
+  if(q.has('h'))  cfg.heights  = parseList(q.get('h'),5,1,200,DEF_H);
+  if(q.has('L'))  cfg.lengths  = parseList(q.get('L'),5,0.1,10,DEF_L);
+  if(q.has('m'))  cfg.masses   = parseList(q.get('m'),2,5,5000,DEF_M);
+  if(q.has('r'))  cfg.rheights = parseList(q.get('r'),5,0.05,9,DEF_R);
+  if(q.has('rm')) cfg.rmasses  = parseList(q.get('rm'),2,5,5000,DEF_N);
+  if(q.has('a')){  var a = parseFloat(q.get('a'));  if(isFinite(a)) cfg.amp  = clamp(a,3,20); }
+  if(q.has('rl')){ var l = parseFloat(q.get('rl')); if(isFinite(l)) cfg.tlen = clamp(l,0.5,10); }
+  if(q.has('ru')){ var u = parseFloat(q.get('ru')); if(isFinite(u)) cfg.mu   = clamp(u,0,0.9); }
+  if(q.get('mode')==='random') cfg.mode='random';
+  if(q.get('mode')==='count') cfg.mode='count';
+  if(q.get('lock')==='1'){ locked = true; cfg.key = false; }
+  G = cfg.g;
+}
+
+function saveConfig(){
+  if(locked) return;
+  try{ localStorage.setItem('glab_ff_cfg', JSON.stringify(cfg)); }catch(e){}
+}
+
+/* ============================================================
+   2) Language
+============================================================ */
+function applyLang(){
+  document.documentElement.lang = lang;
+  var nodes = document.querySelectorAll('[data-en]');
+  for(var i=0;i<nodes.length;i++){
+    var v = nodes[i].getAttribute('data-'+lang);
+    if(v) nodes[i].textContent = v;
+  }
+  var ph = document.querySelectorAll('[data-en-ph]');
+  for(var j=0;j<ph.length;j++){
+    var p = ph[j].getAttribute('data-'+lang+'-ph');
+    if(p) ph[j].placeholder = p;
+  }
+  document.getElementById('langBtn').textContent = (lang==='en') ? 'ไทย' : 'EN';
+  renderStations('F'); renderStations('P'); renderStations('M');
+  renderStations('R'); renderStations('N');
+  renderTrials('F'); renderTrials('P'); renderTrials('R');
+  renderKeys();
+  refreshFall();
+  refreshRamp();
+  setStatus('F',''); setStatus('P',''); setStatus('R','');
+  document.getElementById('dropBtn').textContent = (lang==='en') ? 'Drop the ball' : 'ปล่อยลูกบอล';
+  document.getElementById('slideBtn').textContent = (lang==='en') ? 'Release the block' : 'ปล่อยวัตถุ';
+  document.getElementById('swingBtn').textContent = swinging
+    ? (lang==='en' ? 'Stop' : 'หยุด')
+    : (lang==='en' ? 'Start swinging' : 'เริ่มแกว่ง');
+}
+
+function toggleLang(){
+  lang = (lang==='en') ? 'th' : 'en';
+  try{ localStorage.setItem('glab_ff_lang', lang); }catch(e){}
+  applyLang();
+}
+
+/* ============================================================
+   3) Lab tabs
+============================================================ */
+function showLab(which){
+  if(falling || swinging || sliding) return;
+  lab = which;
+  document.getElementById('stageF').classList.toggle('on', which==='fall');
+  document.getElementById('stageP').classList.toggle('on', which==='pend');
+  document.getElementById('stageR').classList.toggle('on', which==='ramp');
+  document.getElementById('tabF').classList.toggle('on', which==='fall');
+  document.getElementById('tabP').classList.toggle('on', which==='pend');
+  document.getElementById('tabR').classList.toggle('on', which==='ramp');
+  if(which==='fall') refreshFall();
+  else if(which==='pend') refreshPend();
+  else refreshRamp();
+}
+
+/* ============================================================
+   4) Chips
+   F = drop heights, P = string lengths, M = bob masses,
+   R = raised heights, N = block masses
+============================================================ */
+function chipCount(kind){ return (kind==='M'||kind==='N') ? 2 : 5; }
+
+function chipLabel(kind, i){
+  if(kind==='F') return cfg.heights[i].toFixed(1)+' m';
+  if(kind==='P') return cfg.lengths[i].toFixed(2)+' m';
+  if(kind==='M') return cfg.masses[i]+' g';
+  if(kind==='R') return cfg.rheights[i].toFixed(2)+' m';
+  return cfg.rmasses[i]+' g';
+}
+
+function chipCap(kind, i){
+  if(kind==='F') return (lang==='en' ? 'H' : 'สูง ') + (i+1);
+  if(kind==='P') return (lang==='en' ? 'L' : 'ยาว ') + (i+1);
+  if(kind==='R') return (lang==='en' ? 'H' : 'สูง ') + (i+1);
+  return (lang==='en' ? 'M' : 'มวล ') + (i+1);
+}
+
+function chipDone(kind, i){
+  var list = (kind==='F') ? trials.F : (kind==='R'||kind==='N') ? trials.R : trials.P;
+  for(var k=0;k<list.length;k++){
+    if(String(list[k].t).trim() === '') continue;
+    if(kind==='F' && list[k].i  === i) return true;
+    if(kind==='P' && list[k].li === i) return true;
+    if(kind==='M' && list[k].mi === i) return true;
+    if(kind==='R' && list[k].hi === i) return true;
+    if(kind==='N' && list[k].mi === i) return true;
+  }
+  return false;
+}
+
+function chipSelected(kind, i){
+  if(kind==='F') return curF === i;
+  if(kind==='P') return curL === i;
+  if(kind==='M') return curM === i;
+  if(kind==='R') return curR === i;
+  return curN === i;
+}
+
+function renderStations(kind){
+  var wrap = document.getElementById('stations'+kind);
+  wrap.innerHTML = '';
+  for(var i=0;i<chipCount(kind);i++){
+    (function(idx){
+      var b = document.createElement('button');
+      b.className = 'chip'
+        + (kind==='M' ? ' mchip' : '')
+        + (kind==='N' ? ' nchip' : '')
+        + (chipSelected(kind,idx) ? ' on' : '')
+        + (chipDone(kind,idx) ? ' done' : '');
+      b.innerHTML = '<span class="cap">' + chipCap(kind,idx) + '</span>' + chipLabel(kind,idx);
+      b.addEventListener('click', function(){ selectStation(kind, idx); });
+      wrap.appendChild(b);
+    })(i);
+  }
+}
+
+function selectStation(kind, i){
+  if(kind==='F'){
+    if(falling) return;
+    curF = i;
+    document.getElementById('ball').style.transform = 'translateY(0px)';
+    document.getElementById('dropBtn').textContent = (lang==='en') ? 'Drop the ball' : 'ปล่อยลูกบอล';
+    refreshFall(); setStatus('F','');
+    renderStations('F');
+  }else if(kind==='P' || kind==='M'){
+    if(swinging) return;
+    if(kind==='P') curL = i; else curM = i;
+    refreshPend(); setStatus('P','');
+    renderStations('P'); renderStations('M');
+  }else{
+    if(sliding) return;
+    if(kind==='R') curR = i; else curN = i;
+    document.getElementById('slideBtn').textContent = (lang==='en') ? 'Release the block' : 'ปล่อยวัตถุ';
+    refreshRamp(); setStatus('R','');
+    renderStations('R'); renderStations('N');
+  }
+}
+
+/* ============================================================
+   5) Lab 1 — free fall.  y = ½ g t², in real time.
+============================================================ */
+function niceStep(h){
+  var steps = [0.25,0.5,1,2,2.5,5,10,20,25,50];
+  for(var i=0;i<steps.length;i++){ if(h/steps[i] <= 10) return steps[i]; }
+  return 50;
+}
+
+function travelPx(){
+  var shaft = document.getElementById('shaft');
+  var ball = document.getElementById('ball');
+  return Math.max(40, shaft.clientHeight - ball.offsetHeight - 2);
+}
+
+function buildRuler(){
+  var ruler = document.getElementById('ruler');
+  var ballH = document.getElementById('ball').offsetHeight;
+  var travel = travelPx();
+  var h = theH();
+  var step = niceStep(h);
+  ruler.innerHTML = '<div class="rail"></div>';
+  var k = 0;
+  for(var d=0; d<=h+1e-6; d+=step, k++){
+    var y = (d/h)*travel + ballH/2;
+    var el = document.createElement('div');
+    el.className = 'tick' + ((k%2===0) ? ' major' : '');
+    el.style.top = y+'px';
+    el.innerHTML = '<span class="lbl">'+(step<1 ? d.toFixed(1) : d.toFixed(0))+'</span><span class="bar"></span>';
+    ruler.appendChild(el);
+  }
+  var last = document.createElement('div');
+  last.className = 'tick major';
+  last.style.top = (travel + ballH/2)+'px';
+  last.innerHTML = '<span class="lbl">'+h.toFixed(1)+' m</span><span class="bar"></span>';
+  ruler.appendChild(last);
+}
+
+function startDrop(){
+  if(falling) return;
+  falling = true;
+  var btn = document.getElementById('dropBtn');
+  btn.disabled = true;
+  btn.textContent = (lang==='en') ? 'Falling…' : 'กำลังตก…';
+  document.getElementById('ground').classList.remove('hit');
+  document.getElementById('ball').style.transform = 'translateY(0px)';
+  primeAudio();
+
+  if(cfg.mode === 'count') runCountdown('count', 3, release);
+  else{
+    setStatus('F', lang==='en' ? 'Watch closely…' : 'จับตาดูให้ดี…');
+    setTimeout(release, 900 + Math.random()*2600);
+  }
+}
+
+function runCountdown(elId, n, done){
+  var c = document.getElementById(elId);
+  if(n > 0){
+    c.classList.add('on');
+    c.textContent = n;
+    beep(520,0.09);
+    setTimeout(function(){ runCountdown(elId, n-1, done); }, 1000);
+  }else{
+    c.classList.remove('on');
+    c.textContent = '';
+    done();
+  }
+}
+
+function release(){
+  var ball = document.getElementById('ball');
+  var h = theH();
+  var travel = travelPx();
+  var pxPerM = travel / h;
+  var t0 = performance.now();
+  var idx = curF;
+  beep(880,0.10);
+  setStatus('F', lang==='en' ? 'GO — start your stopwatch' : 'ปล่อยแล้ว — เริ่มจับเวลา');
+
+  function frame(now){
+    var t = (now - t0)/1000;
+    var y = 0.5*G*t*t;
+    if(y >= h){
+      ball.style.transform = 'translateY('+travel+'px)';
+      land(idx);
+      return;
+    }
+    ball.style.transform = 'translateY('+(y*pxPerM)+'px)';
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+function land(idx){
+  beep(220,0.16);
+  var ground = document.getElementById('ground');
+  ground.classList.add('hit');
+  setTimeout(function(){ ground.classList.remove('hit'); }, 550);
+  falling = false;
+  var btn = document.getElementById('dropBtn');
+  btn.disabled = false;
+  btn.textContent = (lang==='en') ? 'Drop again' : 'ปล่อยอีกครั้ง';
+  setStatus('F', lang==='en' ? 'Landed — type your time below' : 'ถึงพื้นแล้ว — กรอกเวลาด้านล่าง');
+  addTrialF(idx);
+}
+
+function refreshFall(){
+  document.getElementById('hVal').textContent = theH().toFixed(1);
+  var match = null;
+  for(var i=0;i<PLANETS.length;i++){
+    if(Math.abs(PLANETS[i].g - cfg.g) < 0.01){ match = PLANETS[i]; break; }
+  }
+  document.getElementById('worldVal').textContent = match ? (match[lang]||match.en) : (lang==='en'?'Custom':'กำหนดเอง');
+  document.getElementById('gSmall').textContent = 'g = ' + cfg.g.toFixed(2);
+  buildRuler();
+  renderKeys();
+}
+
+/* ============================================================
+   6) Lab 2 — pendulum.  θ = θ₀ cos(2πt/T), T = 2π√(L/g).
+   No friction, so it never stops on its own.
+   Mass is drawn but never enters the maths — that is the lesson.
+============================================================ */
+function pendPxPerM(){
+  var zone = document.getElementById('zoneP');
+  var maxL = 0.1;
+  for(var i=0;i<cfg.lengths.length;i++) maxL = Math.max(maxL, cfg.lengths[i]);
+  var avail = Math.max(60, zone.clientHeight - 12 - 30);
+  return avail / maxL;
+}
+
+function bobSizeFor(m){
+  return clamp(Math.round(17 * Math.pow(m/100, 1/3)), 11, 42);
+}
+
+function refreshPend(){
+  var L = theL(), m = theM();
+  document.getElementById('lVal').textContent = L.toFixed(2);
+  document.getElementById('mVal').textContent = m;
+
+  var armPx = L * pendPxPerM();
+  var arm = document.getElementById('arm');
+  var bob = document.getElementById('bob');
+  var size = bobSizeFor(m);
+
+  arm.style.height = armPx + 'px';
+  bob.style.width = size + 'px';
+  bob.style.height = size + 'px';
+  if(!swinging) arm.style.transform = 'rotate(0deg)';
+
+  document.getElementById('lenline').style.top = (12 + armPx) + 'px';
+  document.getElementById('lenlabel').textContent = 'L = ' + L.toFixed(2) + ' m';
+
+  renderKeys();
+}
+
+function toggleSwing(){ if(swinging) stopSwing(); else startSwing(); }
+
+function startSwing(){
+  swinging = true;
+  primeAudio();
+  var btn = document.getElementById('swingBtn');
+  btn.classList.add('stop');
+  btn.textContent = (lang==='en') ? 'Stop' : 'หยุด';
+  setStatus('P', lang==='en' ? 'Swinging — count 10 complete swings' : 'กำลังแกว่ง — นับให้ครบ 10 รอบ');
+
+  var arm = document.getElementById('arm');
+  var T = periodOf(theL());
+  var amp = cfg.amp;
+  var t0 = performance.now();
+
+  function frame(now){
+    if(!swinging) return;
+    var t = (now - t0)/1000;
+    var deg = amp * Math.cos(2*Math.PI*t/T);
+    arm.style.transform = 'rotate('+deg.toFixed(3)+'deg)';
+    swingRAF = requestAnimationFrame(frame);
+  }
+  swingRAF = requestAnimationFrame(frame);
+}
+
+function stopSwing(){
+  swinging = false;
+  if(swingRAF) cancelAnimationFrame(swingRAF);
+  swingRAF = null;
+  document.getElementById('arm').style.transform = 'rotate(0deg)';
+  var btn = document.getElementById('swingBtn');
+  btn.classList.remove('stop');
+  btn.textContent = (lang==='en') ? 'Start swinging' : 'เริ่มแกว่ง';
+  setStatus('P', lang==='en' ? 'Stopped — type your total below' : 'หยุดแล้ว — กรอกเวลารวมด้านล่าง');
+  addTrialP(curL, curM);
+}
+
+/* ============================================================
+   7) Lab 3 — inclined track.
+   a = g(sinθ − μcosθ), s = ½at², in real time.
+   Mass changes the drawn block but not the timing.
+============================================================ */
+function rampGeom(){
+  var zone = document.getElementById('zoneR');
+  var W = zone.clientWidth, H = zone.clientHeight;
+  var maxH = 0.05;
+  for(var i=0;i<cfg.rheights.length;i++) maxH = Math.max(maxH, cfg.rheights[i]);
+  var padX = 14, floorY = 24, padTop = 26;
+  var availW = Math.max(80, W - padX*2);
+  var availH = Math.max(60, H - floorY - padTop);
+  return {
+    pxPerM: Math.min(availW/cfg.tlen, availH/maxH),
+    padX: padX, floorY: floorY, W: W
+  };
+}
+
+function blockSizeFor(m){
+  return clamp(Math.round(16 * Math.pow(m/200, 1/3)), 12, 40);
+}
+
+function refreshRamp(){
+  var h = theRH(), m = theRM(), L = cfg.tlen;
+  document.getElementById('rhVal').textContent = h.toFixed(2);
+  document.getElementById('rmVal').textContent = m;
+  document.getElementById('rlVal').textContent = L.toFixed(2);
+
+  var g = rampGeom();
+  var rampPx = L * g.pxPerM;
+  var sinT = clamp(h/L, 0, 0.999);
+  var deg = Math.asin(sinT) * 180 / Math.PI;
+  var risePx = rampPx * sinT;
+  var runPx  = rampPx * Math.sqrt(1 - sinT*sinT);
+
+  var ramp = document.getElementById('ramp');
+  ramp.style.width = rampPx + 'px';
+  ramp.style.right = g.padX + 'px';
+  ramp.style.bottom = g.floorY + 'px';
+  ramp.style.transform = 'rotate(' + deg.toFixed(3) + 'deg)';
+
+  var block = document.getElementById('block');
+  var size = blockSizeFor(m);
+  block.style.width = size + 'px';
+  block.style.height = size + 'px';
+  if(!sliding) setBlockAt(0, rampPx, size);
+
+  document.getElementById('floor').style.bottom = g.floorY + 'px';
+
+  var hm = document.getElementById('hmark');
+  hm.style.left = (g.W - g.padX - runPx) + 'px';
+  hm.style.bottom = g.floorY + 'px';
+  hm.style.height = risePx + 'px';
+  document.getElementById('hlabel').textContent = 'h = ' + h.toFixed(2) + ' m';
+
+  var ll = document.getElementById('llabel');
+  ll.textContent = 'L = ' + L.toFixed(2) + ' m';
+  ll.style.left = (g.W - g.padX - runPx/2) + 'px';
+  ll.style.bottom = Math.max(2, g.floorY - 16) + 'px';
+
+  var slides = slideAccel(h) > 0;
+  var warn = document.getElementById('warnR');
+  if(slides){
+    warn.style.display = 'none';
+  }else{
+    warn.style.display = 'block';
+    warn.textContent = (lang==='en')
+      ? 'At this height friction holds the block still. Ask your teacher to raise the track higher.'
+      : 'ที่ความสูงนี้ แรงเสียดทานมากพอที่จะยึดวัตถุไว้ ทำให้ไม่ไถลลง ให้แจ้งครูเพื่อยกรางให้สูงขึ้น';
+  }
+  document.getElementById('slideBtn').disabled = !slides;
+
+  renderKeys();
+}
+
+function setBlockAt(s, rampPx, size){
+  var span = Math.max(1, rampPx - size);
+  var frac = clamp(s/cfg.tlen, 0, 1);
+  document.getElementById('block').style.left = (frac*span + size/2) + 'px';
+}
+
+function startSlide(){
+  if(sliding) return;
+  if(slideAccel(theRH()) <= 0) return;
+  sliding = true;
+  var btn = document.getElementById('slideBtn');
+  btn.disabled = true;
+  btn.textContent = (lang==='en') ? 'Sliding…' : 'กำลังไถล…';
+  document.getElementById('floor').classList.remove('hit');
+  primeAudio();
+
+  if(cfg.mode === 'count') runCountdown('countR', 3, releaseBlock);
+  else{
+    setStatus('R', lang==='en' ? 'Watch closely…' : 'จับตาดูให้ดี…');
+    setTimeout(releaseBlock, 900 + Math.random()*2600);
+  }
+}
+
+function releaseBlock(){
+  var h = theRH();
+  var a = slideAccel(h);
+  var L = cfg.tlen;
+  var g = rampGeom();
+  var rampPx = L * g.pxPerM;
+  var size = document.getElementById('block').offsetWidth;
+  var t0 = performance.now();
+  var hi = curR, mi = curN;
+  beep(880,0.10);
+  setStatus('R', lang==='en' ? 'GO — start your stopwatch' : 'ปล่อยแล้ว — เริ่มจับเวลา');
+
+  function frame(now){
+    var t = (now - t0)/1000;
+    var s = 0.5*a*t*t;
+    if(s >= L){
+      setBlockAt(L, rampPx, size);
+      arrive(hi, mi);
+      return;
+    }
+    setBlockAt(s, rampPx, size);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+function arrive(hi, mi){
+  beep(220,0.16);
+  var floor = document.getElementById('floor');
+  floor.classList.add('hit');
+  setTimeout(function(){ floor.classList.remove('hit'); }, 550);
+  sliding = false;
+  var btn = document.getElementById('slideBtn');
+  btn.disabled = false;
+  btn.textContent = (lang==='en') ? 'Release again' : 'ปล่อยอีกครั้ง';
+  setStatus('R', lang==='en' ? 'Reached the bottom — type your time below' : 'ถึงปลายรางแล้ว — กรอกเวลาด้านล่าง');
+  addTrialR(hi, mi);
+}
+
+/* ============================================================
+   8) Sound
+============================================================ */
+var actx = null;
+function primeAudio(){
+  if(!actx){
+    try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+  }
+  if(actx && actx.state==='suspended'){ try{ actx.resume(); }catch(e){} }
+}
+function beep(freq, dur){
+  if(!cfg.sound || !actx) return;
+  try{
+    var o = actx.createOscillator(), g2 = actx.createGain();
+    o.frequency.value = freq; o.type='sine';
+    g2.gain.setValueAtTime(0.0001, actx.currentTime);
+    g2.gain.exponentialRampToValueAtTime(0.25, actx.currentTime+0.01);
+    g2.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+dur);
+    o.connect(g2); g2.connect(actx.destination);
+    o.start(); o.stop(actx.currentTime+dur+0.02);
+  }catch(e){}
+}
+
+/* ============================================================
+   9) Tables
+============================================================ */
+function setStatus(kind, msg){ document.getElementById('status'+kind).textContent = msg || ''; }
+
+function loadTrials(){
+  try{
+    var rf = JSON.parse(localStorage.getItem('glab_ff_tr_F')||'[]');
+    if(Array.isArray(rf)){
+      for(var i=0;i<rf.length;i++){
+        if(rf[i] && isFinite(rf[i].i)){
+          trials.F.push({ i: clamp(parseInt(rf[i].i,10),0,4), t: String(rf[i].t||'') });
+        }
+      }
+    }
+  }catch(e){}
+  try{
+    var rp = JSON.parse(localStorage.getItem('glab_ff_tr_P')||'[]');
+    if(Array.isArray(rp)){
+      for(var j=0;j<rp.length;j++){
+        if(rp[j] && isFinite(rp[j].li)){
+          trials.P.push({
+            li: clamp(parseInt(rp[j].li,10),0,4),
+            mi: clamp(parseInt(rp[j].mi,10)||0,0,1),
+            t: String(rp[j].t||'')
+          });
+        }
+      }
+    }
+  }catch(e){}
+  try{
+    var rr = JSON.parse(localStorage.getItem('glab_ff_tr_R')||'[]');
+    if(Array.isArray(rr)){
+      for(var k=0;k<rr.length;k++){
+        if(rr[k] && isFinite(rr[k].hi)){
+          trials.R.push({
+            hi: clamp(parseInt(rr[k].hi,10),0,4),
+            mi: clamp(parseInt(rr[k].mi,10)||0,0,1),
+            t: String(rr[k].t||'')
+          });
+        }
+      }
+    }
+  }catch(e){}
+  try{
+    var nm = localStorage.getItem('glab_ff_name')||'';
+    document.getElementById('nameF').value = nm;
+    document.getElementById('nameP').value = nm;
+    document.getElementById('nameR').value = nm;
+  }catch(e){}
+}
+
+function saveTrials(kind){
+  try{ localStorage.setItem('glab_ff_tr_'+kind, JSON.stringify(trials[kind])); }catch(e){}
+}
+
+function saveName(kind){
+  var v = document.getElementById('name'+kind).value;
+  try{ localStorage.setItem('glab_ff_name', v); }catch(e){}
+  ['F','P','R'].forEach(function(k){
+    if(k !== kind) document.getElementById('name'+k).value = v;
+  });
+}
+
+function addTrialF(idx){
+  trials.F.push({ i: idx, t: '' });
+  saveTrials('F'); renderTrials('F'); focusLast('F');
+}
+function addTrialP(li, mi){
+  trials.P.push({ li: li, mi: mi, t: '' });
+  saveTrials('P'); renderTrials('P'); focusLast('P');
+}
+function addTrialR(hi, mi){
+  trials.R.push({ hi: hi, mi: mi, t: '' });
+  saveTrials('R'); renderTrials('R'); focusLast('R');
+}
+
+function focusLast(kind){
+  var inputs = document.querySelectorAll('#tbody'+kind+' .t-in');
+  if(inputs.length) inputs[inputs.length-1].focus();
+}
+
+function rowLabel(kind, item){
+  if(kind==='F') return cfg.heights[item.i].toFixed(1)+' m';
+  if(kind==='P') return cfg.lengths[item.li].toFixed(2)+' m<br>'+cfg.masses[item.mi]+' g';
+  return cfg.rheights[item.hi].toFixed(2)+' m<br>'+cfg.rmasses[item.mi]+' g';
+}
+
+function refreshChipsFor(kind){
+  if(kind==='F') renderStations('F');
+  else if(kind==='P'){ renderStations('P'); renderStations('M'); }
+  else { renderStations('R'); renderStations('N'); }
+}
+
+function renderTrials(kind){
+  var tb = document.getElementById('tbody'+kind);
+  var empty = document.getElementById('empty'+kind);
+  var list = trials[kind];
+  tb.innerHTML = '';
+  if(list.length === 0){ empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  for(var i=0;i<list.length;i++){
+    var tr = document.createElement('tr');
+
+    var td1 = document.createElement('td');
+    td1.className = 'n'; td1.textContent = (i+1);
+
+    var td2 = document.createElement('td');
+    td2.className = 'par';
+    td2.innerHTML = rowLabel(kind, list[i]);
+
+    var td3 = document.createElement('td');
+    var inp = document.createElement('input');
+    inp.type='number'; inp.step='0.01'; inp.min='0'; inp.className='t-in';
+    inp.placeholder = (kind==='P')
+      ? (lang==='en' ? 'e.g. 20.1' : 'เช่น 20.1')
+      : (lang==='en' ? 'e.g. 1.45' : 'เช่น 1.45');
+    inp.value = list[i].t;
+    (function(k,ii){
+      inp.addEventListener('input', function(){
+        trials[k][ii].t = this.value;
+        saveTrials(k);
+        refreshChipsFor(k);
+      });
+    })(kind,i);
+    td3.appendChild(inp);
+
+    var td4 = document.createElement('td');
+    var b = document.createElement('button');
+    b.className='del'; b.textContent='×';
+    b.setAttribute('aria-label','delete');
+    (function(k,ii){
+      b.addEventListener('click', function(){
+        trials[k].splice(ii,1);
+        saveTrials(k); renderTrials(k); refreshChipsFor(k);
+      });
+    })(kind,i);
+    td4.appendChild(b);
+
+    tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4);
+    tb.appendChild(tr);
+  }
+}
+
+function clearTrials(kind){
+  var msg = (lang==='en') ? 'Delete all trials in this lab?' : 'ลบข้อมูลทั้งหมดของแลปนี้?';
+  if(confirm(msg)){
+    trials[kind] = [];
+    saveTrials(kind); renderTrials(kind); refreshChipsFor(kind); setStatus(kind,'');
+  }
+}
+
+/* ============================================================
+   10) Export
+============================================================ */
+function buildRows(kind){
+  var name = document.getElementById('name'+kind).value || '';
+  var rows = [];
+  if(kind==='F'){
+    rows.push(lang==='en'
+      ? ['Name','Trial','Height (m)','Fall time (s)']
+      : ['ชื่อ','ครั้งที่','ความสูง (m)','เวลาที่ตก (s)']);
+    for(var i=0;i<trials.F.length;i++){
+      rows.push([name, (i+1), cfg.heights[trials.F[i].i], trials.F[i].t]);
+    }
+  }else if(kind==='P'){
+    rows.push(lang==='en'
+      ? ['Name','Trial','Length (m)','Mass (g)','Time for 10 swings (s)']
+      : ['ชื่อ','ครั้งที่','ความยาว (m)','มวล (g)','เวลา 10 รอบ (s)']);
+    for(var j=0;j<trials.P.length;j++){
+      rows.push([name, (j+1), cfg.lengths[trials.P[j].li], cfg.masses[trials.P[j].mi], trials.P[j].t]);
+    }
+  }else{
+    rows.push(lang==='en'
+      ? ['Name','Trial','Track length (m)','Raised height (m)','Mass (g)','Time down (s)']
+      : ['ชื่อ','ครั้งที่','ความยาวราง (m)','ความสูงที่ยก (m)','มวล (g)','เวลาที่ไถลลง (s)']);
+    for(var k=0;k<trials.R.length;k++){
+      rows.push([name, (k+1), cfg.tlen, cfg.rheights[trials.R[k].hi], cfg.rmasses[trials.R[k].mi], trials.R[k].t]);
+    }
+  }
+  return rows;
+}
+
+function copyTable(kind){
+  var txt = buildRows(kind).map(function(r){ return r.join('\t'); }).join('\n');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){
+      toast(lang==='en' ? 'Table copied' : 'คัดลอกตารางแล้ว');
+    }, function(){ fallbackCopy(txt); });
+  } else fallbackCopy(txt);
+}
+
+function fallbackCopy(txt, okMsg){
+  var ta = document.createElement('textarea');
+  ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{
+    document.execCommand('copy');
+    toast(okMsg || (lang==='en'?'Table copied':'คัดลอกตารางแล้ว'));
+  }catch(e){ toast(lang==='en'?'Copy failed':'คัดลอกไม่สำเร็จ'); }
+  document.body.removeChild(ta);
+}
+
+function downloadCSV(kind){
+  var csv = '\uFEFF' + buildRows(kind).map(function(r){
+    return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(',');
+  }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  var nm = (document.getElementById('name'+kind).value || 'lab').replace(/[^\w\u0E00-\u0E7F-]+/g,'_');
+  var tail = (kind==='F') ? '_freefall.csv' : (kind==='P') ? '_pendulum.csv' : '_ramp.csv';
+  a.download = nm + tail;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+}
+
+function toast(msg){
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  setTimeout(function(){ el.classList.remove('on'); }, 1800);
+}
+
+/* ============================================================
+   11) Teacher settings
+============================================================ */
+function readFields(prefix, count, lo, hi){
+  var out = [];
+  for(var i=0;i<count;i++){
+    var v = parseFloat(document.getElementById(prefix+i).value);
+    if(!isFinite(v)) return null;
+    out.push(clamp(v,lo,hi));
+  }
+  return out;
+}
+
+function openSettings(){
+  document.getElementById('setG').value = cfg.g;
+  buildPlanetButtons();
+  for(var i=0;i<5;i++){
+    document.getElementById('setH'+i).value = cfg.heights[i];
+    document.getElementById('setL'+i).value = cfg.lengths[i];
+    document.getElementById('setR'+i).value = cfg.rheights[i];
+  }
+  document.getElementById('setM0').value = cfg.masses[0];
+  document.getElementById('setM1').value = cfg.masses[1];
+  document.getElementById('setN0').value = cfg.rmasses[0];
+  document.getElementById('setN1').value = cfg.rmasses[1];
+  document.getElementById('setAmp').value = cfg.amp;
+  document.getElementById('setTL').value = cfg.tlen;
+  document.getElementById('setMu').value = cfg.mu;
+  document.getElementById('secFall').style.display = (lab==='fall') ? 'block' : 'none';
+  document.getElementById('secPend').style.display = (lab==='pend') ? 'block' : 'none';
+  document.getElementById('secRamp').style.display = (lab==='ramp') ? 'block' : 'none';
+  setMode(cfg.mode); setSound(cfg.sound); setKey(cfg.key);
+  checkStuck();
+  document.getElementById('linkBox').style.display='none';
+  document.getElementById('linkNote').style.display='none';
+  document.getElementById('copyLinkBtn').style.display='none';
+  document.getElementById('mask').classList.add('on');
+}
+function closeSettings(){ document.getElementById('mask').classList.remove('on'); }
+
+function buildPlanetButtons(){
+  var wrap = document.getElementById('gPresets');
+  wrap.innerHTML = '';
+  var gv = parseFloat(document.getElementById('setG').value);
+  for(var i=0;i<PLANETS.length;i++){
+    (function(p){
+      var b = document.createElement('div');
+      b.className = 'hcell';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'iconbtn';
+      btn.style.width = '100%';
+      btn.style.borderColor = (isFinite(gv) && Math.abs(gv-p.g)<0.005) ? 'var(--amber)' : '';
+      btn.textContent = (p[lang]||p.en) + ' ' + p.g;
+      btn.addEventListener('click', function(){
+        document.getElementById('setG').value = p.g;
+        buildPlanetButtons();
+        checkStuck();
+      });
+      b.appendChild(btn);
+      wrap.appendChild(b);
+    })(PLANETS[i]);
+  }
+}
+
+function setMode(m){
+  cfg.mode = m;
+  document.getElementById('mode-count').classList.toggle('on', m==='count');
+  document.getElementById('mode-random').classList.toggle('on', m==='random');
+}
+function setSound(s){
+  cfg.sound = !!s;
+  document.getElementById('snd-on').classList.toggle('on', !!s);
+  document.getElementById('snd-off').classList.toggle('on', !s);
+}
+function setKey(k){
+  cfg.key = !!k;
+  document.getElementById('key-on').classList.toggle('on', !!k);
+  document.getElementById('key-off').classList.toggle('on', !k);
+}
+
+/* Warn the teacher about any raised height where friction wins. */
+function checkStuck(){
+  var el = document.getElementById('muWarn');
+  var L = parseFloat(document.getElementById('setTL').value);
+  var u = parseFloat(document.getElementById('setMu').value);
+  if(!isFinite(L) || !isFinite(u)){ el.style.display='none'; return; }
+  var bad = [];
+  for(var i=0;i<5;i++){
+    var h = parseFloat(document.getElementById('setR'+i).value);
+    if(!isFinite(h)) continue;
+    var s = clamp(h/L,0,0.999), c = Math.sqrt(1-s*s);
+    if(EARTH_G*(s - u*c) <= 0.0001) bad.push(h.toFixed(2)+' m');
+  }
+  if(bad.length === 0){ el.style.display='none'; return; }
+  el.style.display='block';
+  el.textContent = (lang==='en')
+    ? 'The block will not move at these heights: ' + bad.join(', ') + '. Raise the track higher or lower the friction.'
+    : 'ที่ความสูงเหล่านี้วัตถุจะไม่ไถลลง: ' + bad.join(', ') + ' ให้ยกรางสูงขึ้นหรือลดความเสียดทานลง';
+}
+
+function commitSettings(){
+  var gv = parseFloat(document.getElementById('setG').value);
+  var hs = readFields('setH',5,1,200);
+  var ls = readFields('setL',5,0.1,10);
+  var ms = readFields('setM',2,5,5000);
+  var rs = readFields('setR',5,0.05,9);
+  var ns = readFields('setN',2,5,5000);
+  var a  = parseFloat(document.getElementById('setAmp').value);
+  var tl = parseFloat(document.getElementById('setTL').value);
+  var mu = parseFloat(document.getElementById('setMu').value);
+  if(!isFinite(gv) || gv <= 0){ toast(lang==='en'?'Enter a gravity value':'กรอกค่าแรงโน้มถ่วง'); return false; }
+  if(!hs){ toast(lang==='en'?'Fill in all five heights':'กรอกความสูงให้ครบ 5 ช่อง'); return false; }
+  if(!ls){ toast(lang==='en'?'Fill in all five lengths':'กรอกความยาวให้ครบ 5 ช่อง'); return false; }
+  if(!ms){ toast(lang==='en'?'Fill in both bob masses':'กรอกมวลลูกตุ้มให้ครบ 2 ช่อง'); return false; }
+  if(!rs){ toast(lang==='en'?'Fill in all five raised heights':'กรอกความสูงที่ยกให้ครบ 5 ช่อง'); return false; }
+  if(!ns){ toast(lang==='en'?'Fill in both block masses':'กรอกมวลวัตถุให้ครบ 2 ช่อง'); return false; }
+  if(!isFinite(a) || !isFinite(tl) || !isFinite(mu)){
+    toast(lang==='en'?'Some settings are still empty':'ยังมีช่องที่ยังไม่ได้กรอก'); return false;
+  }
+  cfg.g = clamp(gv,0.5,30);
+  G = cfg.g;
+  cfg.heights = hs; cfg.lengths = ls; cfg.masses = ms;
+  cfg.rheights = rs; cfg.rmasses = ns;
+  cfg.amp = clamp(a,3,20);
+  cfg.tlen = clamp(tl,0.5,10);
+  cfg.mu = clamp(mu,0,0.9);
+  curF = 0; curL = 0; curM = 0; curR = 0; curN = 0;
+  saveConfig();
+  refreshFall(); refreshPend(); refreshRamp();
+  renderStations('F'); renderStations('P'); renderStations('M');
+  renderStations('R'); renderStations('N');
+  renderTrials('F'); renderTrials('P'); renderTrials('R');
+  return true;
+}
+
+function applySettings(){
+  if(!commitSettings()) return;
+  closeSettings();
+  toast(lang==='en' ? 'Settings applied' : 'บันทึกค่าแล้ว');
+}
+
+function makeLink(){
+  if(!commitSettings()) return;
+  var url = location.origin + location.pathname
+    + '?g='  + cfg.g
+    + '&h='  + cfg.heights.join(',')
+    + '&L='  + cfg.lengths.join(',')
+    + '&m='  + cfg.masses.join(',')
+    + '&a='  + cfg.amp
+    + '&r='  + cfg.rheights.join(',')
+    + '&rm=' + cfg.rmasses.join(',')
+    + '&rl=' + cfg.tlen
+    + '&ru=' + cfg.mu
+    + '&mode=' + cfg.mode
+    + '&lock=1';
+  var box = document.getElementById('linkBox');
+  var okHost = (location.protocol === 'http:' || location.protocol === 'https:')
+    && location.origin && location.origin !== 'null';
+  if(!okHost){
+    box.textContent = (lang==='en')
+      ? 'This preview has no real web address, so a working link cannot be made here. Upload this file to a host such as GitHub Pages, open it from that address, then press this button again.'
+      : 'พรีวิวนี้ยังไม่มีที่อยู่เว็บจริง จึงสร้างลิงก์ที่ใช้งานได้ไม่ได้ ให้อัปโหลดไฟล์นี้ขึ้นเว็บโฮสต์ เช่น GitHub Pages เปิดจากที่อยู่นั้น แล้วกดปุ่มนี้อีกครั้ง';
+    box.style.color = 'var(--signal)';
+    box.style.display = 'block';
+    document.getElementById('linkNote').style.display = 'none';
+    document.getElementById('copyLinkBtn').style.display = 'none';
+    return;
+  }
+  box.style.color = '';
+  box.textContent = url;
+  box.style.display = 'block';
+  document.getElementById('linkNote').style.display='block';
+  document.getElementById('copyLinkBtn').style.display='block';
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(function(){}, function(){});
+  }
+}
+
+/* The automatic copy above silently fails in some viewers, so this
+   button is the reliable fallback: it reads the link off the screen. */
+function copyLink(){
+  var url = document.getElementById('linkBox').textContent;
+  if(!url) return;
+  var msg = lang==='en' ? 'Link copied' : 'คัดลอกลิงก์แล้ว';
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(function(){ toast(msg); },
+      function(){ fallbackCopy(url, msg); });
+  } else fallbackCopy(url, msg);
+}
+
+function renderKeys(){
+  var kf = document.getElementById('keyF');
+  var kp = document.getElementById('keyP');
+  var kr = document.getElementById('keyR');
+  if(locked || !cfg.key){
+    kf.style.display='none'; kp.style.display='none'; kr.style.display='none';
+    return;
+  }
+  var a = [], b = [], c = [];
+  for(var i=0;i<5;i++){
+    a.push(cfg.heights[i].toFixed(1)+' m → '+Math.sqrt(2*cfg.heights[i]/G).toFixed(3)+' s');
+    var T = periodOf(cfg.lengths[i]);
+    b.push(cfg.lengths[i].toFixed(2)+' m → T '+T.toFixed(3)+' s, 10× '+(T*10).toFixed(2)+' s');
+    var t = slideTime(cfg.rheights[i]);
+    c.push(t > 0
+      ? cfg.rheights[i].toFixed(2)+' m → '+t.toFixed(3)+' s, v '+(2*cfg.tlen/t).toFixed(2)+' m/s'
+      : cfg.rheights[i].toFixed(2)+' m → '+(lang==='en'?'stuck':'ไม่ไถล'));
+  }
+  kf.style.display='block';
+  kf.textContent = (lang==='en' ? 'Answer key (g = '+cfg.g.toFixed(2)+') — ' : 'เฉลย (g = '+cfg.g.toFixed(2)+') — ') + a.join('  ·  ');
+  kp.style.display='block';
+  kp.textContent = (lang==='en' ? 'Answer key (same for both masses) — ' : 'เฉลย (เท่ากันทั้งสองมวล) — ') + b.join('  ·  ');
+  kr.style.display='block';
+  kr.textContent = (lang==='en' ? 'Answer key (μ = ' : 'เฉลย (μ = ') + cfg.mu + ') — ' + c.join('  ·  ');
+}
+
+/* ============================================================
+   12) Start up
+============================================================ */
+(function init(){
+  loadConfig();
+  try{
+    var sl = localStorage.getItem('glab_ff_lang');
+    if(sl==='th'||sl==='en') lang = sl;
+  }catch(e){}
+  if(locked) document.getElementById('gearBtn').style.display='none';
+
+  loadTrials();
+  applyLang();
+  showLab('fall');
+  refreshFall(); refreshPend(); refreshRamp();
+  renderStations('F'); renderStations('P'); renderStations('M');
+  renderStations('R'); renderStations('N');
+  renderTrials('F'); renderTrials('P'); renderTrials('R');
+
+  document.getElementById('setG').addEventListener('input', buildPlanetButtons);
+  ['setTL','setMu','setR0','setR1','setR2','setR3','setR4'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', checkStuck);
+  });
+
+  var rt;
+  window.addEventListener('resize', function(){
+    clearTimeout(rt);
+    rt = setTimeout(function(){
+      if(!falling) buildRuler();
+      if(!swinging) refreshPend();
+      if(!sliding) refreshRamp();
+    }, 160);
+  });
+})();
+</script>
+</body>
+</html>
